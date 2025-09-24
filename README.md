@@ -11,9 +11,7 @@ This server provides MCP (Model Context Protocol) tools for interacting with Sal
 ## Prerequisites
 
 - **macOS** (this setup is optimized for macOS)
-- **Node.js** (for Salesforce CLI)
 - **Python 3.11+**
-- **Poetry** (for dependency management)
 
 ## Installation
 
@@ -26,48 +24,48 @@ cd sfmcp
 ```
 
 The installer will automatically:
-- Install Poetry (if needed)
-- Install Python dependencies
-- Install/authenticate Salesforce CLI
+- Install Poetry and Python dependencies
+- Install Node.js Salesforce CLI (if needed)
+- Authenticate with your Salesforce org (or select existing auth)
 - Create `.env` configuration
 - Update Claude Desktop configuration
 
-This will:
-- Install Salesforce CLI if needed
-- Authenticate with your Salesforce org (or select existing auth)
-- Create a `.env` file with your org configuration
-- Set up the default org for the MCP server
+That's it! The script handles everything needed to get you up and running.
 
-Alternatively, you can install Salesforce CLI manually:
-```bash
-npm install -g @salesforce/cli
-sf org login web
-```
+### Manual Setup (Alternative)
 
-### 3. Configure Claude Desktop
+If you prefer to set up manually or the automatic installer doesn't work:
 
-Add this server to your Claude Desktop configuration file:
+1. **Install dependencies:**
+   ```bash
+   # Install Poetry (if needed)
+   curl -sSL https://install.python-poetry.org | python3 -
 
-**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   # Install Python dependencies
+   poetry install
 
-```json
-{
-  "mcpServers": {
-    "sfmcp": {
-      "command": "/path/to/your/sfmcp/run-mcp.sh",
-      "args": []
-    }
-  }
-}
-```
+   # Install Salesforce CLI (if needed)
+   npm install -g @salesforce/cli
+   ```
 
-**Important:** Replace `/path/to/your/sfmcp/run-mcp.sh` with the actual path to the `run-mcp.sh` script in this project directory.
+2. **Authenticate with Salesforce:**
+   ```bash
+   sf org login web
+   ```
 
-**Note:** The `install.py` script automatically detects the correct path and updates your Claude Desktop configuration.
+3. **Configure Claude Desktop** by adding this to your `claude_desktop_config.json`:
+   ```json
+   {
+     "mcpServers": {
+       "sfmcp": {
+         "command": "/path/to/your/sfmcp/run-mcp.sh",
+         "args": []
+       }
+     }
+   }
+   ```
 
-### 4. Restart Claude Desktop
-
-After updating the configuration, restart Claude Desktop to load the new MCP server.
+4. **Restart Claude Desktop** to load the new MCP server.
 
 ## Usage
 
@@ -126,8 +124,8 @@ The server uses environment variables from `.env` file:
 ## Troubleshooting
 
 **"Salesforce CLI not found"**
-- Make sure Node.js is installed
-- Install SF CLI: `npm install -g @salesforce/cli`
+- Re-run the installer: `python install.py`
+- Or install manually: `npm install -g @salesforce/cli`
 
 **"Authentication failed"**
 - Run `sf org list` to check authenticated orgs

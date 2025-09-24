@@ -32,6 +32,60 @@ def check_command_exists(command: str) -> bool:
     return shutil.which(command) is not None
 
 
+def install_poetry() -> None:
+    """Install Poetry if it's not already installed"""
+    print("Checking for Poetry...")
+
+    if check_command_exists("poetry"):
+        print("Poetry is already installed")
+        return
+
+    print("Poetry not found. Installing Poetry...")
+
+    try:
+        # Download and run the Poetry installer
+        import urllib.request
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".py", delete=False) as f:
+            print("Downloading Poetry installer...")
+            with urllib.request.urlopen(
+                "https://install.python-poetry.org"
+            ) as response:
+                installer_script = response.read().decode("utf-8")
+            f.write(installer_script)
+            installer_path = f.name
+
+        # Run the installer
+        result = subprocess.run(
+            [sys.executable, installer_path], capture_output=True, text=True
+        )
+
+        if result.returncode != 0:
+            print(f"❌ Poetry installation failed: {result.stderr}")
+            print("Please install Poetry manually: https://python-poetry.org/docs/")
+            sys.exit(1)
+
+        # Clean up
+        os.unlink(installer_path)
+
+        print("✅ Poetry installed successfully")
+        print("🔄 Please restart your terminal or run 'source ~/.bashrc' (or ~/.zshrc)")
+        print("   Then re-run this script.")
+
+        # Check if poetry is now available
+        if not check_command_exists("poetry"):
+            print("\n⚠️  Poetry was installed but is not in PATH.")
+            print("   You may need to add it manually or restart your terminal.")
+            print('   Try running: export PATH="$HOME/.local/bin:$PATH"')
+            sys.exit(1)
+
+    except Exception as e:
+        print(f"❌ Failed to install Poetry: {e}")
+        print("Please install Poetry manually from: https://python-poetry.org/docs/")
+        sys.exit(1)
+
+
 def install_sf_cli() -> None:
     """Install the Salesforce CLI"""
     print("Installing Salesforce CLI...")
@@ -123,7 +177,7 @@ def select_existing_org(orgs: Dict[str, Dict[str, Any]]) -> Optional[str]:
                 if 1 <= org_num <= len(org_list):
                     selected_org = org_list[org_num - 1]
                     alias = selected_org["alias"]
-                    print(f"Using existing org: {alias}")
+                    print(f"Using existing org: {alias}\n")
 
                     # Get detailed org info and write to .env
                     org_details = get_org_details(alias)
@@ -160,12 +214,6 @@ def authenticate_new_org() -> None:
             capture_output=False,
         )
         print(f"✅ Successfully authenticated to {org_alias}")
-
-        # Set as default org
-        run_command(
-            ["sf", "config", "set", f"target-org={org_alias}"], capture_output=False
-        )
-        print(f"✅ Set {org_alias} as the default org")
 
     except subprocess.CalledProcessError:
         print("❌ Authentication failed")
@@ -267,10 +315,6 @@ def update_claude_desktop_config() -> None:
             json.dump(config, f, indent=2)
         print("✅ Claude Desktop configuration updated successfully")
         print("\n🔄 Please restart Claude Desktop to load the new MCP server")
-        print(f"💡 Server will be available as 'sfmcp' with tools:")
-        print("   - salesforce.query")
-        print("   - salesforce.list_objects")
-        print("   - salesforce.describe")
     except Exception as e:
         print(f"❌ Failed to update Claude Desktop config: {e}")
         print(f"\n📋 Manual configuration needed:")
@@ -311,71 +355,29 @@ def verify_authentication() -> None:
         print("❌ Could not verify authentication")
 
 
-def main() -> None:
-    """Main installation flow"""
-    print("🚀 SFMCP Installation Script")
-    print("=" * 40)
+def print_manual_config() -> None:
+    """Print manual Claude Desktop configuration instructions"""
+    print("\n📋 Manual Claude Desktop Configuration:")
+    print("Add this to your claude_desktop_config.json file:")
+    current_dir = Path.cwd().absolute()
+    wrapper_script = current_dir / "run-mcp.sh"
+    print(
+        json.dumps(
+            {
+                "mcpServers": {
+                    "sfmcp": {
+                        "command": str(wrapper_script),
+                        "args": [],
+                    }
+                }
+            },
+            indent=2,
+        )
+    )
 
-    # Step 1: Install SF CLI
-    install_sf_cli()
 
-    # Step 2: Check for existing authenticated orgs
-    print("\nChecking for authenticated Salesforce orgs...")
-    authenticated_orgs = get_authenticated_orgs()
-
-    if authenticated_orgs:
-        selected_alias = select_existing_org(authenticated_orgs)
-        if selected_alias:
-            # User selected an existing org, verify and offer config update
-            verify_authentication()
-
-            # Offer to update Claude Desktop configuration
-            print("\n" + "=" * 50)
-            update_config = (
-                input(
-                    "Would you like to update your Claude Desktop configuration automatically? (y/n): "
-                )
-                .strip()
-                .lower()
-            )
-
-            if update_config in ["y", "yes", ""]:
-                update_claude_desktop_config()
-            else:
-                print("\n📋 Manual Claude Desktop Configuration:")
-                print("Add this to your claude_desktop_config.json file:")
-                current_dir = Path.cwd().absolute()
-                wrapper_script = current_dir / "run-mcp.sh"
-                print(
-                    json.dumps(
-                        {
-                            "mcpServers": {
-                                "sfmcp": {
-                                    "command": str(wrapper_script),
-                                    "args": [],
-                                }
-                            }
-                        },
-                        indent=2,
-                    )
-                )
-
-            print("\n🎉 Setup complete! You can now use the SFMCP server.")
-            print("\nNext steps:")
-            print("1. Restart Claude Desktop (if config was updated)")
-            print("2. Test the server: poetry run sfmcp-stdio")
-            print("3. Or start HTTP server: poetry run sfmcp-http")
-            return
-    else:
-        print("No authenticated orgs found. Proceeding with authentication...")
-
-    # Step 3: Authenticate new org
-    authenticate_new_org()
-
-    # Step 4: Verify authentication
-    verify_authentication()
-
-    # Step 5: Offer to update Claude Desktop configuration
+def handle_claude_desktop_config() -> None:
+    """Handle Claude Desktop configuration (automatic or manual)"""
     print("\n" + "=" * 50)
     update_config = (
         input(
@@ -388,29 +390,54 @@ def main() -> None:
     if update_config in ["y", "yes", ""]:
         update_claude_desktop_config()
     else:
-        print("\n📋 Manual Claude Desktop Configuration:")
-        print("Add this to your claude_desktop_config.json file:")
-        current_dir = Path.cwd().absolute()
-        wrapper_script = current_dir / "run-mcp.sh"
-        print(
-            json.dumps(
-                {
-                    "mcpServers": {
-                        "sfmcp": {
-                            "command": str(wrapper_script),
-                            "args": [],
-                        }
-                    }
-                },
-                indent=2,
-            )
-        )
+        print_manual_config()
 
+
+def print_completion_message() -> None:
+    """Print setup completion message"""
     print("\n🎉 Setup complete! You can now use the SFMCP server.")
     print("\nNext steps:")
     print("1. Restart Claude Desktop (if config was updated)")
     print("2. Test the server: poetry run sfmcp-stdio")
     print("3. Or start HTTP server: poetry run sfmcp-http")
+
+
+def main() -> None:
+    """Main installation flow"""
+    print("🚀 SFMCP Installation Script")
+    print("=" * 40)
+
+    # Step 1: Install dependencies
+    install_poetry()
+
+    print("\nInstalling Python dependencies...")
+    try:
+        run_command(["poetry", "install"], capture_output=False)
+        print("✅ Python dependencies installed successfully")
+    except subprocess.CalledProcessError:
+        print("❌ Failed to install Python dependencies")
+        print("Please check your Poetry installation and try again")
+        sys.exit(1)
+
+    install_sf_cli()
+
+    # Step 2: Handle Salesforce authentication
+    print("\nChecking for authenticated Salesforce orgs...")
+    authenticated_orgs = get_authenticated_orgs()
+
+    if authenticated_orgs:
+        selected_alias = select_existing_org(authenticated_orgs)
+        if not selected_alias:
+            # User chose to authenticate new org
+            authenticate_new_org()
+    else:
+        print("No authenticated orgs found. Proceeding with authentication...")
+        authenticate_new_org()
+
+    # Step 3: Verify authentication and complete setup
+    verify_authentication()
+    handle_claude_desktop_config()
+    print_completion_message()
 
 
 if __name__ == "__main__":
