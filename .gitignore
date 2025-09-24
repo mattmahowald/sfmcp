@@ -86,3 +86,5 @@ poetry.lock
 .sf/
 .sfdx/
 force-app/main/default/.DeprecatedMetadata/
+
+tmp*

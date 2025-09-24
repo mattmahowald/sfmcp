@@ -89,3 +89,50 @@ The server uses environment-based configuration:
 - **pydantic**: Data validation and serialization
 - **mypy**: Static type checking (strict mode enabled)
 - **ruff**: Fast Python linter and formatter
+
+## Gotchas
+
+### MCP Tool Name Validation
+**Issue:** Claude Desktop validates MCP tool names with pattern `^[a-zA-Z0-9_-]{1,64}$`
+
+**Problem:** Tool names with periods (e.g., `salesforce.query`) will cause validation errors:
+```
+tools.93.FrontendRometeMcpToolDefinition.name: String should match pattern '^[a-zA-Z0-9_-]{1,64}$'
+```
+
+**Solution:** Use underscores instead of periods in tool names:
+- ❌ `salesforce.query`
+- ✅ `salesforce_query`
+
+### STDIO Logging Interference
+**Issue:** Any logging output during STDIO mode interferes with MCP protocol communication.
+
+**Problem:** Causes `BrokenPipeError: [Errno 32] Broken pipe` and connection failures.
+
+**Solution:** Disable logging for STDIO mode:
+```python
+def run_stdio() -> None:
+    configure_logging(level=logging.CRITICAL)  # Suppress all logs
+    mcp.run()
+```
+
+### Async Event Loop Conflicts
+**Issue:** MCP server already runs in an async event loop.
+
+**Problem:** Using `asyncio.run()` inside MCP tools causes:
+```
+Error executing tool: asyncio.run() cannot be called from a running event loop
+```
+
+**Solution:** Make MCP tool functions directly async:
+```python
+# ❌ Wrong - creates nested event loop
+@mcp.tool()
+def my_tool():
+    return asyncio.run(async_function())
+
+# ✅ Correct - tool function is async
+@mcp.tool()
+async def my_tool():
+    return await async_function()
+```

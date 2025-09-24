@@ -25,39 +25,35 @@ class DescribeResult(BaseModel):
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool(
-        name="salesforce.describe",
+        name="salesforce_describe",
         description="Describe an SObject and return field information",
     )
-    def describe_object(args: DescribeArgs) -> DescribeResult:
+    async def describe_object(args: DescribeArgs) -> DescribeResult:
+        sf = SalesforceClient.from_env()
+        describe_data = await sf.describe_object(args.object_api_name)
 
-        async def get_describe():
-            sf = SalesforceClient.from_env()
-            describe_data = await sf.describe_object(args.object_api_name)
+        # Extract field information
+        fields = []
+        for field_data in describe_data.get("fields", []):
+            # Extract picklist values if present
+            picklist_values = None
+            if (
+                field_data.get("type") == "picklist"
+                and "picklistValues" in field_data
+            ):
+                picklist_values = [
+                    pv.get("value")
+                    for pv in field_data["picklistValues"]
+                    if pv.get("active")
+                ]
 
-            # Extract field information
-            fields = []
-            for field_data in describe_data.get("fields", []):
-                # Extract picklist values if present
-                picklist_values = None
-                if (
-                    field_data.get("type") == "picklist"
-                    and "picklistValues" in field_data
-                ):
-                    picklist_values = [
-                        pv.get("value")
-                        for pv in field_data["picklistValues"]
-                        if pv.get("active")
-                    ]
+            field_info = FieldInfo(
+                name=field_data.get("name", ""),
+                type=field_data.get("type", ""),
+                label=field_data.get("label"),
+                nillable=field_data.get("nillable"),
+                picklistValues=picklist_values,
+            )
+            fields.append(field_info)
 
-                field_info = FieldInfo(
-                    name=field_data.get("name", ""),
-                    type=field_data.get("type", ""),
-                    label=field_data.get("label"),
-                    nillable=field_data.get("nillable"),
-                    picklistValues=picklist_values,
-                )
-                fields.append(field_info)
-
-            return DescribeResult(object_api_name=args.object_api_name, fields=fields)
-
-        return asyncio.run(get_describe())
+        return DescribeResult(object_api_name=args.object_api_name, fields=fields)

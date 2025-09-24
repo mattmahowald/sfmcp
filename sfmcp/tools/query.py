@@ -18,15 +18,11 @@ class QueryResult(BaseModel):
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool(
-        name="salesforce.query", description="Run a SOQL query and return JSON rows"
+        name="salesforce_query", description="Run a SOQL query and return JSON rows"
     )
-    def salesforce_query(args: QueryArgs) -> QueryResult:
-
-        async def run_query():
-            sf = SalesforceClient.from_env()
-            rows = await sf.run_soql(args.soql)
-            if args.max_records is not None:
-                rows = rows[: args.max_records]
-            return QueryResult(total_size=len(rows), records=rows)
-
-        return asyncio.run(run_query())
+    async def salesforce_query(args: QueryArgs) -> QueryResult:
+        sf = SalesforceClient.from_env()
+        rows = await sf.run_soql(args.soql)
+        if args.max_records is not None:
+            rows = rows[: args.max_records]
+        return QueryResult(total_size=len(rows), records=rows)

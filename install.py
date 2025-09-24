@@ -3,11 +3,11 @@
 Installation script for SFMCP - Salesforce MCP Server
 Converts the original setup.sh to Python for better cross-platform support.
 """
+import os
 import subprocess
 import sys
 import json
 import shutil
-import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -125,13 +125,6 @@ def select_existing_org(orgs: Dict[str, Dict[str, Any]]) -> Optional[str]:
                     alias = selected_org["alias"]
                     print(f"Using existing org: {alias}")
 
-                    # Set as default org
-                    run_command(
-                        ["sf", "config", "set", f"target-org={alias}"],
-                        capture_output=False,
-                    )
-                    print(f"✅ Set {alias} as the default org")
-
                     # Get detailed org info and write to .env
                     org_details = get_org_details(alias)
                     write_env_file(org_details)
@@ -222,6 +215,82 @@ def get_org_details(alias: str) -> Dict[str, Any]:
         sys.exit(1)
 
 
+def update_claude_desktop_config() -> None:
+    """Update Claude Desktop MCP configuration with this server"""
+    current_dir = Path.cwd().absolute()
+    wrapper_script = current_dir / "run-mcp.sh"
+
+    # Determine config file path based on OS
+    if sys.platform == "darwin":  # macOS
+        config_path = (
+            Path.home()
+            / "Library/Application Support/Claude/claude_desktop_config.json"
+        )
+    elif sys.platform == "win32":  # Windows
+        config_path = (
+            Path(os.getenv("APPDATA", "")) / "Claude/claude_desktop_config.json"
+        )
+    else:  # Linux/other
+        config_path = Path.home() / ".config/claude/claude_desktop_config.json"
+
+    print(f"\n📝 Updating Claude Desktop configuration...")
+    print(f"Config file: {config_path}")
+    print(f"Server path: {current_dir}")
+    print(f"Wrapper script: {wrapper_script}")
+
+    # Create config directory if it doesn't exist
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Load existing config or create new one
+    config = {"mcpServers": {}}
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                config = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            print("⚠️ Could not read existing config, creating new one")
+            config = {"mcpServers": {}}
+
+    # Ensure mcpServers exists
+    if "mcpServers" not in config:
+        config["mcpServers"] = {}
+
+    # Add or update sfmcp server configuration using wrapper script
+    config["mcpServers"]["sfmcp"] = {
+        "command": str(wrapper_script),
+        "args": [],
+    }
+
+    try:
+        # Write updated config
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
+        print("✅ Claude Desktop configuration updated successfully")
+        print("\n🔄 Please restart Claude Desktop to load the new MCP server")
+        print(f"💡 Server will be available as 'sfmcp' with tools:")
+        print("   - salesforce.query")
+        print("   - salesforce.list_objects")
+        print("   - salesforce.describe")
+    except Exception as e:
+        print(f"❌ Failed to update Claude Desktop config: {e}")
+        print(f"\n📋 Manual configuration needed:")
+        print(f"Add this to {config_path}:")
+        print(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "sfmcp": {
+                            "command": "poetry",
+                            "args": ["run", "sfmcp-stdio"],
+                            "cwd": str(current_dir),
+                        }
+                    }
+                },
+                indent=2,
+            )
+        )
+
+
 def verify_authentication() -> None:
     """Verify that authentication was successful"""
     try:
@@ -257,9 +326,45 @@ def main() -> None:
     if authenticated_orgs:
         selected_alias = select_existing_org(authenticated_orgs)
         if selected_alias:
-            # User selected an existing org, we're done
+            # User selected an existing org, verify and offer config update
             verify_authentication()
+
+            # Offer to update Claude Desktop configuration
+            print("\n" + "=" * 50)
+            update_config = (
+                input(
+                    "Would you like to update your Claude Desktop configuration automatically? (y/n): "
+                )
+                .strip()
+                .lower()
+            )
+
+            if update_config in ["y", "yes", ""]:
+                update_claude_desktop_config()
+            else:
+                print("\n📋 Manual Claude Desktop Configuration:")
+                print("Add this to your claude_desktop_config.json file:")
+                current_dir = Path.cwd().absolute()
+                wrapper_script = current_dir / "run-mcp.sh"
+                print(
+                    json.dumps(
+                        {
+                            "mcpServers": {
+                                "sfmcp": {
+                                    "command": str(wrapper_script),
+                                    "args": [],
+                                }
+                            }
+                        },
+                        indent=2,
+                    )
+                )
+
             print("\n🎉 Setup complete! You can now use the SFMCP server.")
+            print("\nNext steps:")
+            print("1. Restart Claude Desktop (if config was updated)")
+            print("2. Test the server: poetry run sfmcp-stdio")
+            print("3. Or start HTTP server: poetry run sfmcp-http")
             return
     else:
         print("No authenticated orgs found. Proceeding with authentication...")
@@ -270,10 +375,42 @@ def main() -> None:
     # Step 4: Verify authentication
     verify_authentication()
 
+    # Step 5: Offer to update Claude Desktop configuration
+    print("\n" + "=" * 50)
+    update_config = (
+        input(
+            "Would you like to update your Claude Desktop configuration automatically? (y/n): "
+        )
+        .strip()
+        .lower()
+    )
+
+    if update_config in ["y", "yes", ""]:
+        update_claude_desktop_config()
+    else:
+        print("\n📋 Manual Claude Desktop Configuration:")
+        print("Add this to your claude_desktop_config.json file:")
+        current_dir = Path.cwd().absolute()
+        wrapper_script = current_dir / "run-mcp.sh"
+        print(
+            json.dumps(
+                {
+                    "mcpServers": {
+                        "sfmcp": {
+                            "command": str(wrapper_script),
+                            "args": [],
+                        }
+                    }
+                },
+                indent=2,
+            )
+        )
+
     print("\n🎉 Setup complete! You can now use the SFMCP server.")
     print("\nNext steps:")
-    print("1. Run the server: poetry run sfmcp-stdio")
-    print("2. Or start HTTP server: poetry run sfmcp-http")
+    print("1. Restart Claude Desktop (if config was updated)")
+    print("2. Test the server: poetry run sfmcp-stdio")
+    print("3. Or start HTTP server: poetry run sfmcp-http")
 
 
 if __name__ == "__main__":

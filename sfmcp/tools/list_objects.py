@@ -13,17 +13,13 @@ class ListObjectsResult(BaseModel):
 
 def register(mcp: FastMCP) -> None:
     @mcp.tool(
-        name="salesforce.list_objects",
+        name="salesforce_list_objects",
         description="Get list of all Salesforce object names (SObjects)",
     )
-    def list_salesforce_objects() -> ListObjectsResult:
+    async def list_salesforce_objects() -> ListObjectsResult:
         """Get list of Salesforce object names"""
-
-        async def get_objects():
-            sf = SalesforceClient.from_env()
-            object_names = await sf.list_objects()
-            return ListObjectsResult(
-                object_names=object_names, total_count=len(object_names)
-            )
-
-        return asyncio.run(get_objects())
+        sf = SalesforceClient.from_env()
+        object_names = await sf.list_objects()
+        return ListObjectsResult(
+            object_names=object_names, total_count=len(object_names)
+        )

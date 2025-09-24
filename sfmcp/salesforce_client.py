@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json
 import asyncio
+import logging
 from typing import Any, Dict, List
 from .config.settings import settings
+
+logger = logging.getLogger("sfmcp.client")
 
 
 class SalesforceClient:
@@ -20,6 +23,7 @@ class SalesforceClient:
     async def _run_cli_command(self, command: List[str]) -> Dict[Any, Any]:
         """Run a Salesforce CLI command asynchronously"""
         try:
+            logger.debug(f"Running SF CLI: {' '.join(command)}")
             process = await asyncio.create_subprocess_exec(
                 *command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
             )
@@ -28,17 +32,21 @@ class SalesforceClient:
 
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown error"
+                logger.error(f"SF CLI failed: {error_msg}")
                 raise Exception(f"Salesforce CLI command failed: {error_msg}")
 
             return json.loads(stdout.decode())
 
         except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse SF CLI JSON output: {e}")
             raise Exception(f"Failed to parse Salesforce CLI output: {e}")
         except FileNotFoundError:
+            logger.error("Salesforce CLI (sf) not found")
             raise Exception(
                 "Salesforce CLI (sf) not found. Please install the Salesforce CLI."
             )
         except Exception as e:
+            logger.error(f"SF CLI command error: {e}")
             raise Exception(f"Error running Salesforce CLI command: {e}")
 
     async def run_soql(self, soql: str) -> List[Dict[str, Any]]:
