@@ -13,6 +13,7 @@ from .prompts import opps_by_stage as prm_opps_by_stage
 
 mcp = FastMCP("sfmcp")
 
+
 def _register_all() -> None:
     tool_query.register(mcp)
     tool_describe.register(mcp)
@@ -20,14 +21,17 @@ def _register_all() -> None:
     res_saved_queries.register(mcp)
     prm_opps_by_stage.register(mcp)
 
+
 def run_stdio() -> None:
     configure_logging()
     _register_all()
     mcp.run_stdio()
+
 
 def run_http() -> None:
     configure_logging()
     _register_all()
     app = SseServer(mcp).fastapi
     import uvicorn
+
     uvicorn.run(app, host=settings.http_host, port=settings.http_port)

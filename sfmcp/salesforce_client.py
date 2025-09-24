@@ -4,6 +4,7 @@ import asyncio
 from typing import Any, Dict, List
 from .config.settings import settings
 
+
 class SalesforceClient:
     def __init__(self, *, instance_url: str, access_token: str):
         self._instance_url = instance_url
@@ -34,7 +35,9 @@ class SalesforceClient:
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse Salesforce CLI output: {e}")
         except FileNotFoundError:
-            raise Exception("Salesforce CLI (sf) not found. Please install the Salesforce CLI.")
+            raise Exception(
+                "Salesforce CLI (sf) not found. Please install the Salesforce CLI."
+            )
         except Exception as e:
             raise Exception(f"Error running Salesforce CLI command: {e}")
 

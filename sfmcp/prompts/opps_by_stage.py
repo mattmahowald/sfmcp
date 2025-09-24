@@ -1,13 +1,16 @@
 from __future__ import annotations
 from mcp.server.fastmcp import FastMCP, Prompt, PromptMessage
 
+
 def register(mcp: FastMCP) -> None:
     @mcp.prompt.list()
     def list_prompts():
-        return [Prompt(
-            name="opps_by_stage",
-            description="Generate a SOQL to list opportunities by a given StageName"
-        )]
+        return [
+            Prompt(
+                name="opps_by_stage",
+                description="Generate a SOQL to list opportunities by a given StageName",
+            )
+        ]
 
     @mcp.prompt.get()
     def get_prompt(name: str, arguments: dict[str, str] | None = None):
