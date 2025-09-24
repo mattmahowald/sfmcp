@@ -1,0 +1,37 @@
+[project]
+name = "sfmcp"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Matt Mahowald",email = "mahowaldmatt@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp (>=1.14.1,<2.0.0)",
+    "fastapi (>=0.117.1,<0.118.0)",
+    "uvicorn (>=0.37.0,<0.38.0)",
+    "pydantic (>=2.11.9,<3.0.0)",
+    "typing-extensions (>=4.15.0,<5.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.18.2"
+types-requests = "^2.32.4.20250913"
+ruff = "^0.13.1"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+
+[tool.ruff]
+select = ["E","F","I","UP","B"]
+line-length = 100
