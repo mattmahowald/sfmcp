@@ -4,9 +4,13 @@ This server provides MCP (Model Context Protocol) tools for interacting with Sal
 
 ## Features
 
-- **Query Tool** (`salesforce.query`) - Run SOQL queries and return structured results
-- **List Objects** (`salesforce.list_objects`) - Get all Salesforce object names in your org
-- **Describe Objects** (`salesforce.describe`) - Get detailed field information for any Salesforce object
+- **Query Tool** (`salesforce_query`) - Run SOQL queries and return structured results
+- **List Objects** (`salesforce_list_objects`) - Get all Salesforce object names in your org
+- **Describe Objects** (`salesforce_describe`) - Get detailed field information for any Salesforce object
+- **List Flows** (`salesforce_list_flows`) - Get all Salesforce flows with status and version information
+- **Describe Flow** (`salesforce_describe_flow`) - Get the complete XML metadata for a specific flow
+- **List Reports** (`salesforce_list_reports`) - Get all Salesforce reports with folder and usage information
+- **List Dashboards** (`salesforce_list_dashboards`) - Get all Salesforce dashboards with folder and usage information
 
 ## Prerequisites
 
@@ -71,9 +75,13 @@ If you prefer to set up manually or the automatic installer doesn't work:
 
 Once configured, you can use these tools in Claude Desktop conversations:
 
-- **"List all Salesforce objects"** - Uses `salesforce.list_objects`
-- **"Describe the Account object"** - Uses `salesforce.describe`
-- **"Query all active accounts"** - Uses `salesforce.query`
+- **"List all Salesforce objects"** - Uses `salesforce_list_objects`
+- **"Describe the Account object"** - Uses `salesforce_describe`
+- **"Query all active accounts"** - Uses `salesforce_query`
+- **"List all flows"** - Uses `salesforce_list_flows`
+- **"Describe the Contact_Last_Reply_Date flow"** - Uses `salesforce_describe_flow`
+- **"List all reports"** - Uses `salesforce_list_reports`
+- **"List all dashboards"** - Uses `salesforce_list_dashboards`
 
 Example queries:
 - `SELECT Id, Name FROM Account LIMIT 10`
