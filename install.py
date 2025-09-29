@@ -32,83 +32,102 @@ def check_command_exists(command: str) -> bool:
     return shutil.which(command) is not None
 
 
-def install_poetry() -> None:
-    """Install Poetry if it's not already installed"""
-    print("Checking for Poetry...")
-
-    if check_command_exists("poetry"):
-        print("Poetry is already installed")
-        return
-
-    print("Poetry not found. Installing Poetry...")
-
-    try:
-        # Download and run the Poetry installer
-        import urllib.request
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w+", suffix=".py", delete=False) as f:
-            print("Downloading Poetry installer...")
-            with urllib.request.urlopen(
-                "https://install.python-poetry.org"
-            ) as response:
-                installer_script = response.read().decode("utf-8")
-            f.write(installer_script)
-            installer_path = f.name
-
-        # Run the installer
-        result = subprocess.run(
-            [sys.executable, installer_path], capture_output=True, text=True
-        )
-
-        if result.returncode != 0:
-            print(f"❌ Poetry installation failed: {result.stderr}")
-            print("Please install Poetry manually: https://python-poetry.org/docs/")
-            sys.exit(1)
-
-        # Clean up
-        os.unlink(installer_path)
-
-        print("✅ Poetry installed successfully")
-        print("🔄 Please restart your terminal or run 'source ~/.bashrc' (or ~/.zshrc)")
-        print("   Then re-run this script.")
-
-        # Check if poetry is now available
-        if not check_command_exists("poetry"):
-            print("\n⚠️  Poetry was installed but is not in PATH.")
-            print("   You may need to add it manually or restart your terminal.")
-            print('   Try running: export PATH="$HOME/.local/bin:$PATH"')
-            sys.exit(1)
-
-    except Exception as e:
-        print(f"❌ Failed to install Poetry: {e}")
-        print("Please install Poetry manually from: https://python-poetry.org/docs/")
-        sys.exit(1)
+def check_python_version() -> bool:
+    """Check if Python version is 3.11+"""
+    version_info = sys.version_info
+    return version_info.major == 3 and version_info.minor >= 11
 
 
-def install_sf_cli() -> None:
-    """Install the Salesforce CLI"""
-    print("Installing Salesforce CLI...")
+def check_prerequisites() -> None:
+    """Check that all required prerequisites are installed"""
+    print("🔍 Checking prerequisites...")
 
-    # Check if node is installed
+    missing_prereqs = []
+
+    # Check Python version
+    if not check_python_version():
+        version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        print(f"❌ Python {version} found, but Python 3.11+ is required")
+        missing_prereqs.append("python")
+    else:
+        version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+        print(f"✅ Python {version}")
+
+    # Check Poetry
+    if not check_command_exists("poetry"):
+        print("❌ Poetry not found")
+        missing_prereqs.append("poetry")
+    else:
+        try:
+            result = run_command(["poetry", "--version"], check=False)
+            if result.returncode == 0:
+                version = result.stdout.strip()
+                print(f"✅ {version}")
+            else:
+                print("✅ Poetry (version check failed)")
+        except:
+            print("✅ Poetry")
+
+    # Check Node.js
     if not check_command_exists("node"):
-        print("Error: You must have Node.js installed to run this project")
-        print("Please install Node.js from: https://nodejs.org/")
+        print("❌ Node.js not found")
+        missing_prereqs.append("nodejs")
+    else:
+        try:
+            result = run_command(["node", "--version"], check=False)
+            if result.returncode == 0:
+                version = result.stdout.strip()
+                print(f"✅ Node.js {version}")
+            else:
+                print("✅ Node.js (version check failed)")
+        except:
+            print("✅ Node.js")
+
+    # Check Salesforce CLI
+    if not check_command_exists("sf"):
+        print("❌ Salesforce CLI (sf) not found")
+        missing_prereqs.append("salesforce-cli")
+    else:
+        try:
+            result = run_command(["sf", "--version"], check=False)
+            if result.returncode == 0:
+                version = result.stdout.strip().split('\n')[0]  # Get first line
+                print(f"✅ {version}")
+            else:
+                print("✅ Salesforce CLI (sf)")
+        except:
+            print("✅ Salesforce CLI (sf)")
+
+    if missing_prereqs:
+        print(f"\n❌ Missing prerequisites: {', '.join(missing_prereqs)}")
+        print("\nPlease install the missing prerequisites and run this script again.")
+        print("\nInstallation instructions:")
+
+        if "python" in missing_prereqs:
+            print("\n📦 Python 3.11+:")
+            print("   macOS: brew install python@3.11")
+            print("   Or download from: https://www.python.org/downloads/")
+
+        if "poetry" in missing_prereqs:
+            print("\n📦 Poetry:")
+            print("   curl -sSL https://install.python-poetry.org | python3 -")
+            print("   Or see: https://python-poetry.org/docs/#installation")
+
+        if "nodejs" in missing_prereqs:
+            print("\n📦 Node.js:")
+            print("   macOS: brew install node")
+            print("   Or download from: https://nodejs.org/")
+
+        if "salesforce-cli" in missing_prereqs:
+            print("\n📦 Salesforce CLI:")
+            print("   npm install -g @salesforce/cli")
+            print("   (Requires Node.js to be installed first)")
+
         sys.exit(1)
 
-    # Check if sf CLI is already installed
-    if check_command_exists("sf"):
-        print("sf CLI is already installed")
-        return
+    print("✅ All prerequisites satisfied!\n")
 
-    print("sf CLI not found. Installing...")
-    try:
-        run_command(["npm", "install", "-g", "@salesforce/cli"], capture_output=False)
-        print("✅ Salesforce CLI installed successfully")
-    except subprocess.CalledProcessError:
-        print("❌ Failed to install Salesforce CLI")
-        print("Please try installing manually: npm install -g @salesforce/cli")
-        sys.exit(1)
+
 
 
 def get_authenticated_orgs() -> Dict[str, Dict[str, Any]]:
@@ -404,13 +423,14 @@ def print_completion_message() -> None:
 
 def main() -> None:
     """Main installation flow"""
-    print("🚀 SFMCP Installation Script")
+    print("🚀 SFMCP Configuration Script")
     print("=" * 40)
 
-    # Step 1: Install dependencies
-    install_poetry()
+    # Step 1: Check prerequisites
+    check_prerequisites()
 
-    print("\nInstalling Python dependencies...")
+    # Step 2: Install Python dependencies
+    print("📦 Installing Python dependencies...")
     try:
         run_command(["poetry", "install"], capture_output=False)
         print("✅ Python dependencies installed successfully")
@@ -419,10 +439,8 @@ def main() -> None:
         print("Please check your Poetry installation and try again")
         sys.exit(1)
 
-    install_sf_cli()
-
-    # Step 2: Handle Salesforce authentication
-    print("\nChecking for authenticated Salesforce orgs...")
+    # Step 3: Handle Salesforce authentication
+    print("\n🔐 Configuring Salesforce authentication...")
     authenticated_orgs = get_authenticated_orgs()
 
     if authenticated_orgs:
@@ -434,7 +452,7 @@ def main() -> None:
         print("No authenticated orgs found. Proceeding with authentication...")
         authenticate_new_org()
 
-    # Step 3: Verify authentication and complete setup
+    # Step 4: Verify authentication and complete setup
     verify_authentication()
     handle_claude_desktop_config()
     print_completion_message()

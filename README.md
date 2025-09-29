@@ -14,50 +14,106 @@ This server provides MCP (Model Context Protocol) tools for interacting with Sal
 
 ## Prerequisites
 
-- **macOS** (this setup is optimized for macOS)
-- **Python 3.11+**
+Before running the configuration script, you must install these prerequisites:
+
+- **macOS** (this setup is optimized for macOS, but should work on Linux/Windows)
+- **Python 3.11+** - Required for running the MCP server
+- **Poetry** - Python dependency management
+- **Node.js** - Required for Salesforce CLI
+- **Salesforce CLI** - Command line interface for Salesforce
+
+### Prerequisites Installation Guide
+
+**1. Python 3.11+**
+```bash
+# macOS (via Homebrew)
+brew install python@3.11
+
+# Or download directly from Python.org
+# https://www.python.org/downloads/
+```
+
+**2. Poetry**
+```bash
+# Install Poetry (official installer)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Verify installation
+poetry --version
+```
+
+**3. Node.js**
+```bash
+# macOS (via Homebrew)
+brew install node
+
+# Or download from Node.js website
+# https://nodejs.org/
+```
+
+**4. Salesforce CLI**
+```bash
+# Install via npm (requires Node.js)
+npm install -g @salesforce/cli
+
+# Verify installation
+sf --version
+```
+
+### Quick Prerequisites Check
+Run these commands to verify all prerequisites are installed:
+```bash
+python3 --version    # Should be 3.11+
+poetry --version     # Should show Poetry version
+node --version       # Should show Node version
+sf --version         # Should show Salesforce CLI version
+```
 
 ## Installation
 
-**One-command setup:**
+**Quick Start** (after installing prerequisites):
 
 ```bash
-git clone https://github.com/yourusername/sfmcp.git
+git clone https://github.com/mattmahowald/sfmcp.git
 cd sfmcp
-./install.py  # Installs everything and configures Claude Desktop
+./install.py  # Configures SFMCP for your Salesforce org
 ```
 
-The installer will automatically:
-- Install Poetry and Python dependencies
-- Install Node.js Salesforce CLI (if needed)
-- Authenticate with your Salesforce org (or select existing auth)
-- Create `.env` configuration
-- Update Claude Desktop configuration
+The configuration script will:
 
-That's it! The script handles everything needed to get you up and running.
+- ✅ Check all prerequisites are installed
+- 📦 Install Python dependencies via Poetry
+- 🔐 Authenticate with your Salesforce org (or select existing auth)
+- ⚙️ Create `.env` configuration file
+- 🖥️ Update Claude Desktop configuration
+
+**Prerequisites must be installed first** - see the Prerequisites section above.
 
 ### Manual Setup (Alternative)
 
-If you prefer to set up manually or the automatic installer doesn't work:
+If you prefer to set up manually:
 
-1. **Install dependencies:**
+1. **Install prerequisites** (see Prerequisites section above)
+
+2. **Install Python dependencies:**
    ```bash
-   # Install Poetry (if needed)
-   curl -sSL https://install.python-poetry.org | python3 -
-
-   # Install Python dependencies
    poetry install
-
-   # Install Salesforce CLI (if needed)
-   npm install -g @salesforce/cli
    ```
 
-2. **Authenticate with Salesforce:**
+3. **Authenticate with Salesforce:**
    ```bash
    sf org login web
    ```
 
-3. **Configure Claude Desktop** by adding this to your `claude_desktop_config.json`:
+4. **Create `.env` file** with your Salesforce org details:
+   ```bash
+   SF_INSTANCE_URL=https://your-org.my.salesforce.com
+   SF_ACCESS_TOKEN=your-access-token
+   SF_ORG_ALIAS=your-org-alias
+   SF_USERNAME=your-username
+   ```
+
+5. **Configure Claude Desktop** by adding this to your `claude_desktop_config.json`:
    ```json
    {
      "mcpServers": {
@@ -69,7 +125,7 @@ If you prefer to set up manually or the automatic installer doesn't work:
    }
    ```
 
-4. **Restart Claude Desktop** to load the new MCP server.
+6. **Restart Claude Desktop** to load the new MCP server.
 
 ## Usage
 
@@ -84,6 +140,7 @@ Once configured, you can use these tools in Claude Desktop conversations:
 - **"List all dashboards"** - Uses `salesforce_list_dashboards`
 
 Example queries:
+
 - `SELECT Id, Name FROM Account LIMIT 10`
 - `SELECT Id, Email FROM Contact WHERE Email != null`
 
@@ -92,6 +149,7 @@ Example queries:
 ### Running the Server
 
 **STDIO Mode (for MCP clients):**
+
 ```bash
 poetry run sfmcp-stdio
 # or
@@ -99,6 +157,7 @@ poetry run sfmcp-stdio
 ```
 
 **HTTP Mode (for testing):**
+
 ```bash
 poetry run sfmcp-http
 # or
@@ -131,14 +190,30 @@ The server uses environment variables from `.env` file:
 
 ## Troubleshooting
 
+**"Prerequisites check failed"**
+
+- Install missing prerequisites using the commands in the Prerequisites section
+- Verify installations with: `python3 --version`, `poetry --version`, `node --version`, `sf --version`
+
 **"Salesforce CLI not found"**
-- Re-run the installer: `python install.py`
-- Or install manually: `npm install -g @salesforce/cli`
+
+- Install Salesforce CLI: `npm install -g @salesforce/cli`
+- Verify Node.js is installed: `node --version`
 
 **"Authentication failed"**
+
 - Run `sf org list` to check authenticated orgs
-- Re-run `python install.py` to set up authentication
+- Re-authenticate: `sf org login web`
+- Re-run the configuration script: `python install.py`
 
 **"Permission denied"**
+
 - Make sure you have proper Salesforce org permissions
 - Check that your access token hasn't expired
+- Try re-authenticating with `sf org login web`
+
+**"Poetry not found"**
+
+- Install Poetry: `curl -sSL https://install.python-poetry.org | python3 -`
+- Add to PATH if needed: `export PATH="$HOME/.local/bin:$PATH"`
+- Restart your terminal and try again
