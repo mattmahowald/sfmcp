@@ -2,6 +2,10 @@
 
 This server provides MCP (Model Context Protocol) tools for interacting with Salesforce using the `sf` CLI. It exposes Salesforce data and metadata through standardized MCP tools that can be used with Claude Desktop and other MCP clients.
 
+<a href="https://glama.ai/mcp/servers/@mattmahowald/sfmcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@mattmahowald/sfmcp/badge" alt="Salesforce Server MCP server" />
+</a>
+
 ## Features
 
 - **Query Tool** (`salesforce_query`) - Run SOQL queries and return structured results
